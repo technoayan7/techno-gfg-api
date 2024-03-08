@@ -2,7 +2,6 @@ const express = require('express');
 const { Scrap } = require('./modules/scrap');
 
 const app = express();
-const port = 3000; 
 
 app.get('/:username', async (req, res) => {
     const username = req.params.username;
@@ -12,6 +11,4 @@ app.get('/:username', async (req, res) => {
     res.json(responseData);
 });
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
+module.exports = app;
