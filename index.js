@@ -2,7 +2,7 @@ const express = require('express');
 const { Scrap } = require('./modules/scrap');
 
 const app = express();
-const port = 9000; 
+const port = 3000; 
 
 app.get('/:username', async (req, res) => {
     const username = req.params.username;
