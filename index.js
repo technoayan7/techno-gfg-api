@@ -1,6 +1,6 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const Scrap = require('./scrap');
+const Scrap = require('./modules/scrap');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
