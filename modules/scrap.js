@@ -1,3 +1,4 @@
+// GeeksForGeeks Profile Scraper
 const axios = require('axios');
 const cheerio = require('cheerio');
 
@@ -5,81 +6,76 @@ class Scrap {
     constructor(username) {
         this.username = username;
     }
-
+    
     async fetchResponse() {
         const BASE_URL = `https://auth.geeksforgeeks.org/user/${this.username}/practice/`;
-
+        const headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        };
+        
         try {
-            const htmlResponse = await axios.get(BASE_URL);
-            if (htmlResponse.status === 200) {
-                const html = htmlResponse.data;
-                const $ = cheerio.load(html);
-                const response = {};
+            const response = await axios.get(BASE_URL, { headers });
+            
+            if (response.status !== 200) {
+                return { "error": "Profile Not Found" };
+            }
+            
+            const $ = cheerio.load(response.data);
+            
+            // Find the script tag containing JSON data
+            const scriptTag = $('#__NEXT_DATA__[type="application/json"]');
+            
+            if (!scriptTag.length) {
+                return { "error": "Could not find user data" };
+            }
+            
+            // Parse the JSON data
+            try {
+                const userData = JSON.parse(scriptTag.html());
+                const userInfo = userData.props.pageProps.userInfo;
+                const userSubmissions = userData.props.pageProps.userSubmissionsInfo;
+                
+                // Extract general information
+                const generalInfo = {
+                    "userName": this.username,
+                    "fullName": userInfo.name || "",
+                    "profilePicture": userInfo.profile_image_url || "",
+                    "institute": userInfo.institute_name || "",
+                    "instituteRank": userInfo.institute_rank || "",
+                    "currentStreak": userInfo.pod_solved_longest_streak || "00",
+                    "maxStreak": userInfo.pod_solved_global_longest_streak || "00",
+                    "codingScore": userInfo.score || 0,
+                    "monthlyScore": userInfo.monthly_score || 0,
+                    "totalProblemsSolved": userInfo.total_problems_solved || 0,
+                };
+                
+                // Extract solved questions by difficulty
                 const solvedStats = {};
-                const generalInfo = {};
-
-                generalInfo.userName = this.username;
-                generalInfo.profilePicture = $('.profile_pic').attr('src');
-                generalInfo.instituteRank = $('.rankNum').text();
-                const streak_details = $('.streakCnt').text().replace(" ", "").split("/");
-                generalInfo.currentStreak = streak_details[0];
-                generalInfo.maxStreak = streak_details[1];
-                generalInfo.institution = $('.basic_details_data').eq(0).text().trim();
-                generalInfo.languagesUsed = $('.basic_details_data').eq(1).text().trim();
-                generalInfo.codingScore = $('.score_card_value').eq(0).text().trim();
-                generalInfo.totalProblemsSolved = $('.score_card_value').eq(1).text().trim();
-                generalInfo.monthlyCodingScore = $('.score_card_value').eq(2).text().trim();
-
-                // Extract questions solved count for each difficulty level
-                const difficulties = ["#school", "#basic", "#easy", "#medium", "#hard"];
-                for (const difficulty of difficulties) {
-                    solvedStats[difficulty.replace("#", "")] = extract_questions_by_difficulty($, difficulty);
+                
+                for (const [difficulty, problems] of Object.entries(userSubmissions)) {
+                    const questions = Object.values(problems).map(details => ({
+                        "question": details.pname,
+                        "questionUrl": `https://practice.geeksforgeeks.org/problems/${details.slug}`
+                    }));
+                    
+                    solvedStats[difficulty.toLowerCase()] = {
+                        "count": questions.length,
+                        "questions": questions
+                    };
                 }
-
-                response.info = generalInfo;
-                response.solvedStats = solvedStats;
-
-                return response;
-            } else {
-                return { error: "Profile Not Found" };
+                
+                return {
+                    "info": generalInfo,
+                    "solvedStats": solvedStats
+                };
+                
+            } catch (error) {
+                return { "error": "Failed to parse user data" };
             }
         } catch (error) {
-            console.error('Error fetching data:', error);
-            return { error: "An error occurred while fetching data" };
+            return { "error": `Request failed: ${error.message}` };
         }
     }
 }
 
-function extract_text_from_elements(elements, element_keys) {
-    const result = {};
-    elements.each((index, element) => {
-        try {
-            const inner_text = $(element).text();
-            result[element_keys[index]] = inner_text === '_ _' ? "" : inner_text;
-        } catch (error) {
-            result[element_keys[index]] = "";
-        }
-    });
-    return result;
-}
-
-function extract_questions_by_difficulty($, difficulty) {
-    try {
-        const response = {};
-        const questions = [];
-        const question_list_by_difficulty_tag = $(`${difficulty} a`);
-        response.count = question_list_by_difficulty_tag.length;
-        question_list_by_difficulty_tag.each((index, question_tag) => {
-            questions.push({
-                question: $(question_tag).text(),
-                questionUrl: $(question_tag).attr('href')
-            });
-        });
-        response.questions = questions;
-        return response;
-    } catch (error) {
-        return { count: 0, questions: [] };
-    }
-}
-
-module.exports = { Scrap };
+module.exports = Scrap;
