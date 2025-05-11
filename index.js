@@ -1,7 +1,7 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
-const Scrap = require('./scrap');
-
+const Scrap = require('./modules/scrap');
+const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
@@ -13,6 +13,9 @@ const limiter = rateLimit({
     legacyHeaders: false,
     message: "Too many request from this IP, try again in 1 hour",
 });
+
+// CORS middleware
+app.use(cors());
 
 // Apply rate limiting to all requests
 app.use(limiter);
