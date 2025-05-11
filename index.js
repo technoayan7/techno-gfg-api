@@ -1,5 +1,6 @@
 add cors in this
 const express = require('express');
+const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const Scrap = require('./modules/scrap');
 
@@ -14,6 +15,9 @@ standardHeaders: "draft-7",
 legacyHeaders: false,
 message: "Too many request from this IP, try again in 1 hour",
 });
+
+// CORS middleware
+app.use(cors());
 
 // Apply rate limiting to all requests
 app.use(limiter);
