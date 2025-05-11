@@ -1,11 +1,11 @@
 const express = require('express');
-const cors = require("cors");
-const rateLimit = require("express-rate-limit");
-const { Scrap } = require('./modules/scrap');
+const rateLimit = require('express-rate-limit');
+const Scrap = require('./scrap');
 
 const app = express();
-const port = 3000; 
+const PORT = process.env.PORT || 5000;
 
+// Rate limiting middleware
 const limiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
     limit: 90,
@@ -14,17 +14,29 @@ const limiter = rateLimit({
     message: "Too many request from this IP, try again in 1 hour",
 });
 
-app.use(cors()); //enable all CORS request
-app.use(limiter); //limit to all API
+// Apply rate limiting to all requests
+app.use(limiter);
 
+// Middleware
+app.use(express.json());
+
+// Routes
 app.get('/:username', async (req, res) => {
-    const username = req.params.username;
-    const scrapInstance = new Scrap(username);
-    const responseData = await scrapInstance.fetchResponse();
-
-    res.json(responseData);
+  try {
+    const { username } = req.params;
+    const scrapper = new Scrap(username);
+    const data = await scrapper.fetchResponse();
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
 });
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-});
+// Start server
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
+
+module.exports = app; // For testing purposes and Vercel serverless deployment
